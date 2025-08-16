@@ -31,6 +31,13 @@ export default [
       prettier,
       '@typescript-eslint': tseslint,
     },
+    settings: {
+      'import/resolver': {
+        typescript: {
+          project: './tsconfig.json',
+        },
+      },
+    },
     rules: {
       'no-console': 'off',
       'no-unused-vars': 'off', // Handled by TypeScript
@@ -43,9 +50,17 @@ export default [
       'import/order': [
         'error',
         {
-          groups: ['builtin', 'external', 'internal', ['parent', 'sibling', 'index']],
+          groups: ['builtin', 'external', 'internal', ['sibling', 'parent'], 'index', 'unknown'],
           'newlines-between': 'always',
           alphabetize: { order: 'asc', caseInsensitive: true },
+          pathGroups: [
+            {
+              group: 'internal',
+              pattern: '@/**',
+              position: 'after',
+            },
+          ],
+          pathGroupsExcludedImportTypes: ['builtin'],
         },
       ],
 
