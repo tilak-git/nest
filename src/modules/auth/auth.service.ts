@@ -2,10 +2,10 @@ import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/co
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 
-import { LoginDto } from '@/auth/dto/login.dto';
-import { SignupDto } from '@/auth/dto/signup.dto';
 import { ErrorMessages } from '@/common/error-messages';
-import { PrismaService } from '@/prisma/prisma.service';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
+import { SignupDto } from '@/modules/auth/dto/signup.dto';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 
 export interface JwtPayload {
   sub: string; // user id
