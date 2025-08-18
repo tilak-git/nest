@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -39,6 +39,15 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      exceptionFactory: (validationErrors = []) => {
+        // Collect all error messages
+        const messages = validationErrors.map((err) => Object.values(err.constraints ?? {})).flat();
+
+        // Join into one string (or take first message if you prefer)
+        const errorMessage = messages.join(', ');
+
+        return new BadRequestException(errorMessage);
+      },
     }),
   );
 

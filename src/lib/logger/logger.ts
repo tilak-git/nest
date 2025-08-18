@@ -1,4 +1,4 @@
-import { LoggerOptions } from 'pino';
+import pino, { LoggerOptions } from 'pino';
 
 export const AppLogger: LoggerOptions = {
   transport: {
@@ -17,3 +17,15 @@ export const AppLogger: LoggerOptions = {
     },
   },
 };
+
+export const logger = pino({
+  transport: {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'SYS:standard',
+      ignore: 'pid,hostname',
+    },
+  },
+  level: process.env.LOG_LEVEL || 'info',
+});
