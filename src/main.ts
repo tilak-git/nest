@@ -3,14 +3,13 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
-import { AppModule } from './app.module';
+import { AppModule } from '@/app.module';
+import { AppLogger } from '@/lib/logger/logger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({
-      logger: true, // Enable Fastify logging
-    }),
+    new FastifyAdapter({ logger: AppLogger }),
   );
 
   // Enable CORS
@@ -70,7 +69,7 @@ async function bootstrap() {
     },
   });
 
-  const port = process.env.SERVER_PORT || 3001;
+  const port = process.env.SERVER_PORT || 5008;
   await app.listen(port, '0.0.0.0'); // Fastify requires host parameter
 
   console.log(`Application is running on: http://localhost:${port}`);
