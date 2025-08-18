@@ -8,7 +8,6 @@ import { AuthJwtGuard } from '@/lib/guards/auth-jwt.guard';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';
 import { JwtStrategy } from '@/modules/auth/strategies/jwt.strategy';
-import { PrismaModule } from '@/modules/prisma/prisma.module';
 
 @Module({
   imports: [
@@ -28,7 +27,6 @@ import { PrismaModule } from '@/modules/prisma/prisma.module';
       },
       inject: [ConfigService],
     }),
-    PrismaModule,
   ],
   controllers: [AuthController],
   providers: [
