@@ -1,4 +1,7 @@
+import { join } from 'path';
+
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 
 import { PrismaModule } from '@/modules/prisma/prisma.module';
 
@@ -8,7 +11,16 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 
 @Module({
-  imports: [UserModule, AuthModule, PrismaModule],
+  imports: [
+    ConfigModule.forRoot({
+      envFilePath: [join(process.cwd(), '.env')],
+      isGlobal: true,
+      cache: true,
+    }),
+    UserModule,
+    AuthModule,
+    PrismaModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
