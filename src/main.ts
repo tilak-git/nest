@@ -16,6 +16,15 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  // Register raw body plugin for webhook verification
+  await app.register(require('fastify-raw-body'), {
+    field: 'rawBody',
+    global: false,
+    encoding: 'utf8',
+    runFirst: true,
+    routes: ['/api/payments/webhook'],
+  });
+
   // Enable CORS
   await app.register(require('@fastify/cors'), {
     origin: true, // Allow all origins in development

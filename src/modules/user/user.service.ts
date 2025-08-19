@@ -52,10 +52,12 @@ export class UserService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    const isPasswordValid = await bcrypt.compare(updatePasswordUserDto.password, user.password);
+    if (user.password) {
+      const isPasswordValid = await bcrypt.compare(updatePasswordUserDto.password, user.password);
 
-    if (!isPasswordValid) {
-      throw new NotFoundException('Current password is incorrect');
+      if (!isPasswordValid) {
+        throw new NotFoundException('Current password is incorrect');
+      }
     }
 
     const hashedPassword = await bcrypt.hash(updatePasswordUserDto.newPassword, 10);

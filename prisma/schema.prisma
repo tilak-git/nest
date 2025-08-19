@@ -14,14 +14,89 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  email            String   @unique
+  password         String?
+  name             String?
+  stripeCustomerId String?  @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  orders        Order[]
+  subscriptions Subscription[]
 
   @@index([id])
   @@index([createdAt])
   @@map("users")
+}
+
+model Product {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  price           Int // Price in paisa (smallest currency unit)
+  stripeProductId String?  @unique
+  stripePriceId   String?  @unique
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  orderItems OrderItem[]
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  userId                String
+  stripePaymentIntentId String?     @unique
+  status                OrderStatus @default(PENDING)
+  amount                Int // Amount in paisa
+  currency              String      @default("inr")
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id])
+  orderItems OrderItem[]
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int    @default(1)
+  price     Int // Price at time of order in paisa
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String
+  stripeSubscriptionId String             @unique
+  status               SubscriptionStatus
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  PAST_DUE
+  TRIALING
+  UNPAID
 }

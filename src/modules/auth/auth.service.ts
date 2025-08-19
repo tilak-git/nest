@@ -75,9 +75,12 @@ export class AuthService {
       throw new UnauthorizedException(ErrorMessages.USER_NOT_FOUND);
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException(ErrorMessages.INVALID_CREDENTIALS);
+    if (user.password) {
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        throw new UnauthorizedException(ErrorMessages.INVALID_CREDENTIALS);
+      }
     }
 
     const { password: _, ...userWithoutPassword } = user;

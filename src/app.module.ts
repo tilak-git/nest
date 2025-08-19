@@ -3,12 +3,12 @@ import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { AppController } from '@/app.controller';
+import { AppService } from '@/app.service';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { PaymentModule } from '@/modules/payment/payment.module';
 import { PrismaModule } from '@/modules/prisma/prisma.module';
-
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { AuthModule } from './modules/auth/auth.module';
-import { UserModule } from './modules/user/user.module';
+import { UserModule } from '@/modules/user/user.module';
 
 @Module({
   imports: [
@@ -20,6 +20,7 @@ import { UserModule } from './modules/user/user.module';
     UserModule,
     AuthModule,
     PrismaModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
