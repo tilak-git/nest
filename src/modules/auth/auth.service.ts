@@ -29,15 +29,15 @@ export class AuthService {
   async signup(signupDto: SignupDto) {
     const { email, password } = signupDto;
 
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException(ErrorMessages.EMAIL_IN_USE + `: ${email}`);
+    }
+
     try {
-      const existingUser = await this.prisma.user.findUnique({
-        where: { email },
-      });
-
-      if (existingUser) {
-        throw new ConflictException(ErrorMessages.EMAIL_IN_USE);
-      }
-
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await this.prisma.user.create({
@@ -55,15 +55,8 @@ export class AuthService {
         access_token,
       };
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          logger.warn(`Signup failed (P2002): Email already in use -> ${email}`);
-          throw new ConflictException(ErrorMessages.EMAIL_IN_USE);
-        }
-      }
-
-      if (error instanceof ConflictException) {
-        throw error;
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(ErrorMessages.EMAIL_IN_USE);
       }
 
       logger.error({ err: error }, `Signup failed for email=${email}`);
@@ -74,52 +67,38 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { email },
-      });
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
 
-      if (!user) {
-        throw new UnauthorizedException(ErrorMessages.INVALID_CREDENTIALS);
-      }
-
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        throw new UnauthorizedException(ErrorMessages.INVALID_CREDENTIALS);
-      }
-
-      const { password: _, ...userWithoutPassword } = user;
-      const access_token = await this.generateToken(user.id, user.email);
-
-      return {
-        user: userWithoutPassword,
-        access_token,
-      };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-
-      logger.error({ err: error }, `Login failed for email=${email}`);
-      throw new InternalServerErrorException('Could not complete login');
+    if (!user) {
+      throw new UnauthorizedException(ErrorMessages.USER_NOT_FOUND);
     }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException(ErrorMessages.INVALID_CREDENTIALS);
+    }
+
+    const { password: _, ...userWithoutPassword } = user;
+    const access_token = await this.generateToken(user.id, user.email);
+
+    return {
+      user: userWithoutPassword,
+      access_token,
+    };
   }
 
   async validateUser(userId: string) {
-    try {
-      return await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-    } catch (error) {
-      logger.error({ err: error }, `ValidateUser failed for id=${userId}`);
-      throw new InternalServerErrorException('Could not validate user');
-    }
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
   }
 
   private async generateToken(userId: string, email: string): Promise<string> {

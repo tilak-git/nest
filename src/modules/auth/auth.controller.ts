@@ -5,6 +5,7 @@ import { Public } from '@/lib/decorators/public.decorator';
 import { AuthService } from '@/modules/auth/auth.service';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { SignupDto } from '@/modules/auth/dto/signup.dto';
+import { CurrentUserInterface } from '@/types/user.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -23,12 +24,12 @@ export class AuthController {
   }
 
   @Get('me')
-  async getProfile(@CurrentUser() user: any) {
+  async getProfile(@CurrentUser() user: CurrentUserInterface) {
     return user;
   }
 
   @Get('protected')
-  async getProtectedResource(@CurrentUser() user: any) {
+  async getProtectedResource(@CurrentUser() user: CurrentUserInterface) {
     return {
       message: 'This is a protected route',
       user,

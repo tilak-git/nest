@@ -4,6 +4,8 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 import { AppModule } from '@/app.module';
+import { GlobalExceptionFilter } from '@/lib/interceptor/global-exception-filter';
+import { TransformResponseInterceptor } from '@/lib/interceptor/response-interceptor';
 import { AppLogger } from '@/lib/logger/logger';
 
 async function bootstrap() {
@@ -17,6 +19,7 @@ async function bootstrap() {
   // Enable CORS
   await app.register(require('@fastify/cors'), {
     origin: true, // Allow all origins in development
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
@@ -42,9 +45,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       exceptionFactory: (validationErrors = []) => {
-        // Collect all error messages
         const messages = validationErrors.map((err) => Object.values(err.constraints ?? {})).flat();
-
         // Join into one string (or take first message if you prefer)
         const errorMessage = messages.join(', ');
 
@@ -52,6 +53,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalInterceptors(new TransformResponseInterceptor());
 
   // Swagger configuration
   const config = new DocumentBuilder()

@@ -14,12 +14,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid()) // or @default(uuid())
+  id        String   @id @default(cuid())
   email     String   @unique
   password  String
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([id])
+  @@index([createdAt])
   @@map("users")
 }
