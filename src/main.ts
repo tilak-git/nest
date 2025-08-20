@@ -55,14 +55,13 @@ async function bootstrap() {
       transform: true,
       exceptionFactory: (validationErrors = []) => {
         const messages = validationErrors.map((err) => Object.values(err.constraints ?? {})).flat();
-        // Join into one string (or take first message if you prefer)
         const errorMessage = messages.join(', ');
-
         return new BadRequestException(errorMessage);
       },
     }),
   );
 
+  // Global Response and Error Handler
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalInterceptors(new TransformResponseInterceptor());
 

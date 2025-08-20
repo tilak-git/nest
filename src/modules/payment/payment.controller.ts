@@ -14,6 +14,7 @@ import {
 import { FastifyRequest } from 'fastify';
 
 import { Public } from '@/lib/decorators/public.decorator';
+import { CreateCheckoutSessionDto } from '@/modules/payment/dto/create-checkout-session.dto';
 import { CreatePaymentIntentDto } from '@/modules/payment/dto/create-payment-intent.dto';
 import { PaymentService } from '@/modules/payment/payment.service';
 
@@ -24,6 +25,11 @@ export class PaymentsController {
   @Post('create-intent')
   async createPaymentIntent(@Body() createPaymentIntentDto: CreatePaymentIntentDto) {
     return this.paymentService.createPaymentIntent(createPaymentIntentDto);
+  }
+
+  @Post('checkout')
+  async createCheckoutSession(@Body() createCheckoutSessionDto: CreateCheckoutSessionDto) {
+    return this.paymentService.createCheckoutSession(createCheckoutSessionDto);
   }
 
   @Public()
@@ -39,5 +45,10 @@ export class PaymentsController {
   @Get('intent/:id')
   async getPaymentIntent(@Param('id') id: string) {
     return this.paymentService.getPaymentIntent(id);
+  }
+
+  @Get('plans')
+  async getPaymentPlans() {
+    return this.paymentService.getPaymentPlans();
   }
 }

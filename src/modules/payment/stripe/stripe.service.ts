@@ -5,23 +5,20 @@ import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
 import { logger } from '@/lib/logger/logger';
+import { Currency_ENUM, PaymentMethod_ENUM } from '@/types/payment.enums';
 
 @Injectable()
 export class StripeService {
   private stripe: Stripe;
 
   constructor(private readonly configService: ConfigService) {
-    const stripeSecretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-
-    if (!stripeSecretKey) {
-      throw new Error('STRIPE_SECRET_KEY is not defined in environment variables');
-    }
+    const stripeSecretKey = this.configService.getOrThrow<string>('STRIPE_SECRET_KEY');
 
     this.stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2025-07-30.basil',
     });
 
-    logger.info('StripeService initialized with API version: ' + this.stripe);
+    logger.info('StripeService initialized Successfully');
   }
 
   async createCustomer(email: string, name?: string): Promise<Stripe.Customer> {
@@ -33,17 +30,13 @@ export class StripeService {
 
   async createPaymentIntent(
     amount: number,
-    currency: string = 'inr',
+    currency: string = Currency_ENUM.INR,
     customerId?: string,
   ): Promise<Stripe.PaymentIntent> {
     const paymentIntentData: Stripe.PaymentIntentCreateParams = {
       amount: amount * 100, // Convert to paisa
       currency,
-      automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: 'always',
-      },
-      //   payment_method_types: ['card', 'upi'],
+      payment_method_types: [PaymentMethod_ENUM.CARD],
     };
 
     if (customerId) {
@@ -67,12 +60,12 @@ export class StripeService {
     return this.stripe.paymentIntents.retrieve(id);
   }
 
-  async constructWebhookEvent(body: Buffer, signature: string): Promise<Stripe.Event> {
-    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+  async createCheckoutSession(params: Stripe.Checkout.SessionCreateParams) {
+    return this.stripe.checkout.sessions.create(params);
+  }
 
-    if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET is not defined in environment variables');
-    }
+  async constructWebhookEvent(body: Buffer, signature: string): Promise<Stripe.Event> {
+    const webhookSecret = this.configService.getOrThrow<string>('STRIPE_WEBHOOK_SECRET');
 
     return this.stripe.webhooks.constructEvent(body, signature, webhookSecret);
   }
