@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 
 import { PrismaService } from '@/modules/prisma/prisma.service';
-import { UpdatePasswordUserDto, UpdateUserDto } from '@/modules/user/dto/updateUser.dto';
+import { UpdatePasswordUserDto, UpdateUserDto } from '@/modules/user/dto/user.dto';
 
 @Injectable()
 export class UserService {
@@ -17,6 +17,7 @@ export class UserService {
         email: true,
         createdAt: true,
         updatedAt: true,
+        subscriptions: true,
       },
     });
 

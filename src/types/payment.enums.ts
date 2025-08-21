@@ -6,13 +6,13 @@ export enum OrderStatus_ENUM {
 }
 
 export enum SubscriptionStatus_ENUM {
-  ACTIVE = 'ACTIVE',
-  CANCELLED = 'CANCELLED',
-  INCOMPLETE = 'INCOMPLETE',
-  INCOMPLETE_EXPIRED = 'INCOMPLETE_EXPIRED',
-  PAST_DUE = 'PAST_DUE',
-  TRIALING = 'TRIALING',
-  UNPAID = 'UNPAID',
+  ACTIVE = 'active',
+  CANCELLED = 'cancelled',
+  INCOMPLETE = 'incomplete',
+  INCOMPLETE_EXPIRED = 'incomplete_expired',
+  PAST_DUE = 'past_due',
+  TRIALING = 'trailing',
+  UNPAID = 'unpaid',
 }
 
 export enum PaymentMethod_ENUM {
@@ -21,8 +21,6 @@ export enum PaymentMethod_ENUM {
 }
 
 export enum Currency_ENUM {
-  INR = 'INR',
-  USD = 'USD',
-  EUR = 'EUR',
-  GBP = 'GBP',
+  INR = 'inr',
+  USD = 'usd',
 }

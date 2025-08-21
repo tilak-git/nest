@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
 import { logger } from '@/lib/logger/logger';
-import { Currency_ENUM, PaymentMethod_ENUM } from '@/types/payment.enums';
+import { Currency_ENUM, PaymentMethod_ENUM, SubscriptionStatus_ENUM } from '@/types/payment.enums';
 
 @Injectable()
 export class StripeService {
@@ -54,6 +54,50 @@ export class StripeService {
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent'],
     });
+  }
+
+  async updateSubscription(
+    customerId: string,
+    priceId: string,
+  ): Promise<Stripe.Subscription | Stripe.Checkout.Session> {
+    const subscriptions = await this.stripe.subscriptions.list({
+      customer: customerId,
+      status: SubscriptionStatus_ENUM.ACTIVE,
+      limit: 1,
+    });
+
+    const subscription = subscriptions.data[0];
+
+    if (!subscription) throw new Error('No active subscription found');
+
+    const subscriptionItemId = subscription.items.data[0].id;
+
+    const updatedPlan = await this.stripe.subscriptions.update(subscription.id, {
+      items: [
+        {
+          id: subscriptionItemId,
+          price: priceId,
+        },
+      ],
+      proration_behavior: 'always_invoice',
+    });
+
+    const latestInvoice = await this.stripe.invoices.retrieve(updatedPlan.latest_invoice as string);
+
+    if (latestInvoice.status === 'open') {
+      const session = await this.stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer: customerId,
+        payment_method_types: [PaymentMethod_ENUM.CARD],
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${process.env.FRONTEND_URL}/dashboard`,
+        cancel_url: `${process.env.FRONTEND_URL}/dashboard`,
+      });
+
+      return session;
+    }
+
+    return updatedPlan;
   }
 
   async retrievePaymentIntent(id: string): Promise<Stripe.PaymentIntent> {

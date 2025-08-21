@@ -37,7 +37,7 @@ async function main() {
     });
 
     console.log(
-      `Seeded product: ${product.name} ($${price.unit_amount}/${price.recurring?.interval})`,
+      `Seeded product: ${product.name} ($${price.unit_amount! / 100}/${price.recurring?.interval})`,
     );
   }
 }

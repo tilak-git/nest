@@ -3,8 +3,7 @@ import { Body, Controller, Get, Post } from '@nestjs/common';
 import { CurrentUser } from '@/lib/decorators/currentUser.decoraror';
 import { Public } from '@/lib/decorators/public.decorator';
 import { AuthService } from '@/modules/auth/auth.service';
-import { LoginDto } from '@/modules/auth/dto/login.dto';
-import { SignupDto } from '@/modules/auth/dto/signup.dto';
+import { LoginDto, SignupDto } from '@/modules/auth/dto/auth.dto';
 import { CurrentUserInterface } from '@/types/user.interface';
 
 @Controller('auth')
@@ -25,7 +24,7 @@ export class AuthController {
 
   @Get('me')
   async getProfile(@CurrentUser() user: CurrentUserInterface) {
-    return user;
+    return this.authService.getProfile(user.id);
   }
 
   @Get('protected')

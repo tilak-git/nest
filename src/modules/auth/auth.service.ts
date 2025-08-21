@@ -10,8 +10,7 @@ import * as bcrypt from 'bcryptjs';
 
 import { ErrorMessages } from '@/common/error-messages';
 import { logger } from '@/lib/logger/logger';
-import { LoginDto } from '@/modules/auth/dto/login.dto';
-import { SignupDto } from '@/modules/auth/dto/signup.dto';
+import { LoginDto, SignupDto } from '@/modules/auth/dto/auth.dto';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 
 export interface JwtPayload {
@@ -90,6 +89,29 @@ export class AuthService {
       user: userWithoutPassword,
       access_token,
     };
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        subscriptions: {
+          select: {
+            id: true,
+            status: true,
+            currentPeriodStart: true,
+            currentPeriodEnd: true,
+          },
+        },
+      },
+    });
+
+    return user;
   }
 
   async validateUser(userId: string) {

@@ -26,15 +26,16 @@ model User {
 }
 
 model SubscriptionPlan {
-  id              String   @id @default(cuid())
+  id              String         @id @default(cuid())
   name            String
   description     String?
   price           Int // Price in paisa (smallest currency unit)
-  stripeProductId String?  @unique
-  stripePriceId   String?  @unique
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  stripeProductId String?        @unique
+  stripePriceId   String?        @unique
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  Subscription    Subscription[]
 
   @@map("Product")
 }
@@ -55,16 +56,18 @@ model Order {
 
 model Subscription {
   id                   String             @id @default(cuid())
-  userId               String
+  userId               String             @unique
   stripeSubscriptionId String             @unique
+  planId               String?
   status               SubscriptionStatus
   currentPeriodStart   DateTime
-  currentPeriodEnd     DateTime
+  currentPeriodEnd     DateTime?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   deletedAt            DateTime?          @db.Timestamptz(3)
 
-  user User @relation(fields: [userId], references: [id])
+  user User              @relation(fields: [userId], references: [id])
+  plan SubscriptionPlan? @relation(fields: [planId], references: [id])
 }
 
 enum OrderStatus {

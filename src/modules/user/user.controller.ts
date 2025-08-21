@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Put } from '@nestjs/common';
 
 import { CurrentUser } from '@/lib/decorators/currentUser.decoraror';
-import { UpdatePasswordUserDto, UpdateUserDto } from '@/modules/user/dto/updateUser.dto';
+import { UpdatePasswordUserDto, UpdateUserDto } from '@/modules/user/dto/user.dto';
 import { UserService } from '@/modules/user/user.service';
 
 @Controller('user')

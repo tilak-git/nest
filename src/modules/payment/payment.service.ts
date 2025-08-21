@@ -4,142 +4,61 @@ import { Injectable } from '@nestjs/common';
 import Stripe from 'stripe';
 
 import { logger } from '@/lib/logger/logger';
-import { CreateCheckoutSessionDto } from '@/modules/payment/dto/create-checkout-session.dto';
-import { CreatePaymentIntentDto } from '@/modules/payment/dto/create-payment-intent.dto';
+import { CreateCheckoutSessionDto } from '@/modules/payment/dto/payment.dto';
+import { PaymentIntentService } from '@/modules/payment/payment-intent/payment-intent.service';
+import { PaymentSubscriptionService } from '@/modules/payment/payment-subscription/payment-subscription.service';
 import { StripeService } from '@/modules/payment/stripe/stripe.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
-import { Currency_ENUM, OrderStatus_ENUM } from '@/types/payment.enums';
 
 @Injectable()
 export class PaymentService {
   constructor(
     private prisma: PrismaService,
     private stripeService: StripeService,
+    private paymentIntentService: PaymentIntentService,
+    private paymentSubscriptionService: PaymentSubscriptionService,
   ) {}
-
-  async createPaymentIntent(dto: CreatePaymentIntentDto) {
-    let user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-
-    if (!user) {
-      const stripeCustomer = await this.stripeService.createCustomer(dto.email, dto.name);
-
-      user = await this.prisma.user.create({
-        data: {
-          email: dto.email,
-          name: dto.name,
-          stripeCustomerId: stripeCustomer.id,
-        },
-      });
-    }
-
-    let customerId = user.stripeCustomerId;
-    if (!customerId) {
-      const stripeCustomer = await this.stripeService.createCustomer(
-        dto.email,
-        dto.name || undefined,
-      );
-
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { stripeCustomerId: stripeCustomer.id },
-      });
-
-      customerId = stripeCustomer.id;
-    }
-
-    const paymentIntent = await this.stripeService.createPaymentIntent(
-      dto.amount,
-      Currency_ENUM.INR,
-      customerId,
-    );
-
-    const order = await this.prisma.order.create({
-      data: {
-        userId: user.id,
-        stripePaymentIntentId: paymentIntent.id,
-        amount: dto.amount * 100, // Store in paisa
-        currency: Currency_ENUM.INR,
-        status: OrderStatus_ENUM.PENDING,
-      },
-    });
-
-    return {
-      clientSecret: paymentIntent.client_secret,
-      orderId: order.id,
-    };
-  }
 
   async handleWebhook(body: Buffer, signature: string) {
     const event = await this.stripeService.constructWebhookEvent(body, signature);
+    logger.info(`Event from Stripe in Payment Webhook: ${event.type}`);
 
     switch (event.type) {
+      case 'payment_intent.created':
+        await this.paymentIntentService.handlePaymentIntentCreated(
+          event.data.object as Stripe.PaymentIntent,
+        );
+        break;
       case 'payment_intent.succeeded':
-        await this.handlePaymentSuccess(event.data.object as Stripe.PaymentIntent);
+        await this.paymentIntentService.handlePaymentIntentSuccess(
+          event.data.object as Stripe.PaymentIntent,
+        );
         break;
       case 'payment_intent.payment_failed':
-        await this.handlePaymentFailure(event.data.object as Stripe.PaymentIntent);
+        await this.paymentIntentService.handlePaymentIntentFailure(
+          event.data.object as Stripe.PaymentIntent,
+        );
         break;
-      case 'invoice.payment_succeeded':
-        await this.handleInvoicePaymentSuccess(event.data.object as Stripe.Invoice);
+      case 'customer.subscription.created':
+        await this.paymentSubscriptionService.handleSubscriptionCreated(
+          event.data.object as Stripe.Subscription,
+        );
         break;
-      case 'checkout.session.completed':
-        await this.handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+      case 'customer.subscription.updated':
+        await this.paymentSubscriptionService.handleSubscriptionUpdated(
+          event.data.object as Stripe.Subscription,
+        );
+        break;
+      case 'customer.subscription.deleted':
+        await this.paymentSubscriptionService.handleSubscriptionDeleted(
+          event.data.object as Stripe.Subscription,
+        );
         break;
       default:
         logger.info(`Unhandled event type: ${event.type}`);
     }
 
     return { received: true };
-  }
-
-  private async handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
-    await this.prisma.order.update({
-      where: { stripePaymentIntentId: paymentIntent.id },
-      data: { status: OrderStatus_ENUM.PAID },
-    });
-
-    logger.info(`Payment succeeded for intent: ${paymentIntent.id}`);
-  }
-
-  private async handlePaymentFailure(paymentIntent: Stripe.PaymentIntent) {
-    await this.prisma.order.update({
-      where: { stripePaymentIntentId: paymentIntent.id },
-      data: { status: OrderStatus_ENUM.FAILED },
-    });
-
-    logger.info(`Payment failed for intent: ${paymentIntent.id}`);
-  }
-
-  private async handleInvoicePaymentSuccess(invoice: Stripe.Invoice) {
-    logger.info(`Invoice payment succeeded: ${invoice.id}`);
-  }
-
-  private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-    const user = await this.prisma.user.findUnique({
-      where: { stripeCustomerId: session.customer as string },
-    });
-
-    logger.info(`Checkout Session with user: ${session.id} , ${user?.email}`);
-
-    if (!user) {
-      throw new Error(`User not found for customer ID: ${session.customer}`);
-    }
-
-    if (session.subscription) {
-      await this.prisma.order.create({
-        data: {
-          userId: user.id,
-          stripePaymentIntentId: session.payment_intent as string,
-          amount: 0,
-          currency: Currency_ENUM.INR,
-          status: OrderStatus_ENUM.PAID,
-        },
-      });
-    }
-
-    logger.info(`Checkout Session payment succeeded: ${session.id}`);
   }
 
   async createCheckoutSession(createCheckoutSessionDto: CreateCheckoutSessionDto) {
@@ -191,6 +110,24 @@ export class PaymentService {
     return { url: session.url };
   }
 
+  async handlePlanChange(userId: string, priceId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true },
+    });
+
+    if (!user || !user.stripeCustomerId) {
+      throw new Error(`User not found or does not have a Stripe customer ID: ${userId}`);
+    }
+
+    const subscription = await this.stripeService.updateSubscription(
+      user.stripeCustomerId,
+      priceId,
+    );
+
+    return subscription;
+  }
+
   async getPaymentPlans() {
     const plans = await this.prisma.subscriptionPlan.findMany({
       where: { active: true },
@@ -204,18 +141,5 @@ export class PaymentService {
     });
 
     return plans;
-  }
-
-  async getPaymentIntent(id: string) {
-    const paymentIntent = await this.stripeService.retrievePaymentIntent(id);
-    const order = await this.prisma.order.findUnique({
-      where: { stripePaymentIntentId: id },
-      include: { user: true },
-    });
-
-    return {
-      paymentIntent,
-      order,
-    };
   }
 }

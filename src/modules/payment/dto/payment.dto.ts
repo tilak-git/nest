@@ -16,3 +16,11 @@ export class CreatePaymentIntentDto {
   @IsString()
   description?: string;
 }
+
+export class CreateCheckoutSessionDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  priceId: string;
+}
