@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer';
 
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
 import { logger } from '@/lib/logger/logger';
@@ -9,6 +10,7 @@ import { PaymentIntentService } from '@/modules/payment/payment-intent/payment-i
 import { PaymentSubscriptionService } from '@/modules/payment/payment-subscription/payment-subscription.service';
 import { StripeService } from '@/modules/payment/stripe/stripe.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { PaymentMethod_ENUM } from '@/types/payment.enums';
 
 @Injectable()
 export class PaymentService {
@@ -17,6 +19,7 @@ export class PaymentService {
     private stripeService: StripeService,
     private paymentIntentService: PaymentIntentService,
     private paymentSubscriptionService: PaymentSubscriptionService,
+    private configService: ConfigService,
   ) {}
 
   async handleWebhook(body: Buffer, signature: string) {
@@ -52,6 +55,11 @@ export class PaymentService {
       case 'customer.subscription.deleted':
         await this.paymentSubscriptionService.handleSubscriptionDeleted(
           event.data.object as Stripe.Subscription,
+        );
+        break;
+      case 'checkout.session.completed':
+        await this.paymentSubscriptionService.handleCheckoutSessionCompleted(
+          event.data.object as Stripe.Checkout.Session,
         );
         break;
       default:
@@ -103,7 +111,7 @@ export class PaymentService {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.FRONTEND_URL}/dashboard`,
+      success_url: `${process.env.FRONTEND_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/dashboard`,
     });
 
@@ -113,19 +121,82 @@ export class PaymentService {
   async handlePlanChange(userId: string, priceId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { stripeCustomerId: true },
+      include: {
+        subscriptions: {
+          where: { status: 'ACTIVE' },
+          include: { plan: true },
+        },
+      },
     });
 
     if (!user || !user.stripeCustomerId) {
       throw new Error(`User not found or does not have a Stripe customer ID: ${userId}`);
     }
 
-    const subscription = await this.stripeService.updateSubscription(
-      user.stripeCustomerId,
-      priceId,
+    const activeSubscription = user.subscriptions[0];
+
+    if (!activeSubscription) {
+      throw new Error(`User does not have an active subscription to change`);
+    }
+
+    const newPlan = await this.prisma.subscriptionPlan.findUnique({
+      where: { stripePriceId: priceId },
+    });
+
+    if (!newPlan) {
+      throw new Error(`Invalid price ID: ${priceId}`);
+    }
+
+    if (activeSubscription.planId === newPlan.id) {
+      throw new Error(`User is already subscribed to this plan`);
+    }
+
+    logger.info(
+      `User ${user.email} attempting to change from ${activeSubscription.plan?.name} to ${newPlan.name}`,
     );
 
-    return subscription;
+    const currentPrice = activeSubscription.plan?.price || 0;
+    const newPrice = newPlan.price;
+
+    if (newPrice <= currentPrice) {
+      const updatedSubscription = await this.stripeService.updateSubscriptionDirect(
+        activeSubscription.stripeSubscriptionId,
+        priceId,
+      );
+
+      logger.info(`Plan changed successfully without checkout for user ${user.email}`);
+
+      return {
+        requiresPayment: false,
+        message: 'Plan changed successfully',
+        subscription: updatedSubscription,
+      };
+    } else {
+      const session = await this.stripeService.createCheckoutSession({
+        mode: 'subscription',
+        customer: user.stripeCustomerId,
+        payment_method_types: [PaymentMethod_ENUM.CARD],
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${this.configService.getOrThrow<string>('FRONTEND_URL')}/dashboard?plan_change=success`,
+        cancel_url: `${this.configService.getOrThrow<string>('FRONTEND_URL')}/dashboard?plan_change=cancelled`,
+        subscription_data: {
+          metadata: {
+            replacing_subscription: activeSubscription.stripeSubscriptionId,
+            plan_change: 'true',
+            user_id: userId,
+          },
+        },
+        allow_promotion_codes: true,
+      });
+
+      logger.info(`Plan change requires checkout for user ${user.email}`);
+
+      return {
+        requiresPayment: true,
+        url: session.url,
+        message: 'Redirecting to payment...',
+      };
+    }
   }
 
   async getPaymentPlans() {
@@ -138,8 +209,33 @@ export class PaymentService {
         price: true,
         stripePriceId: true,
       },
+      orderBy: { price: 'asc' },
     });
 
     return plans;
+  }
+
+  async getUserCurrentPlan(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        subscriptions: {
+          include: {
+            plan: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!user?.subscriptions?.length) {
+      return null;
+    }
+
+    return {
+      subscription: user.subscriptions[0],
+      plan: user.subscriptions[0].plan,
+    };
   }
 }

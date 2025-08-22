@@ -106,6 +106,13 @@ export class AuthService {
             status: true,
             currentPeriodStart: true,
             currentPeriodEnd: true,
+            plan: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+              },
+            },
           },
         },
       },
