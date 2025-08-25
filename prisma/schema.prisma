@@ -78,11 +78,11 @@ enum OrderStatus {
 }
 
 enum SubscriptionStatus {
-  ACTIVE
-  CANCELLED
-  INCOMPLETE
-  INCOMPLETE_EXPIRED
-  PAST_DUE
-  TRIALING
-  UNPAID
+  active             @map("ACTIVE")
+  cancelled          @map("CANCELLED")
+  incomplete         @map("INCOMPLETE")
+  incomplete_expired @map("INCOMPLETE_EXPIRED")
+  past_due           @map("PAST_DUE")
+  trailing           @map("TRAILING")
+  unpaid             @map("UNPAID")
 }

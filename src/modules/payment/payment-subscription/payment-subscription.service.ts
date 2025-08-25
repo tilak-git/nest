@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 
 import { logger } from '@/lib/logger/logger';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { SubscriptionStatus_ENUM } from '@/types/payment.enums';
 
 @Injectable()
 export class PaymentSubscriptionService {
@@ -49,7 +50,7 @@ export class PaymentSubscriptionService {
           stripeSubscriptionId: isReplacingSubscription,
         },
         data: {
-          status: 'CANCELLED',
+          status: SubscriptionStatus_ENUM.CANCELLED,
           deletedAt: new Date(),
         },
       });
@@ -117,21 +118,16 @@ export class PaymentSubscriptionService {
       throw new Error(`No plan found for price ID: ${stripePriceId}`);
     }
 
-    // Check if this is a plan change
     const isPlanChange = existingSubscription.planId !== plan.id;
-    const newStatus = subscription.status.toUpperCase() as SubscriptionStatus;
+    const newStatus = subscription.status as SubscriptionStatus;
 
-    // Only update the subscription if:
-    // 1. Status changed to something meaningful (not PAST_DUE from plan change attempt)
-    // 2. It's a successful plan change (status is ACTIVE)
-    // 3. It's a legitimate status update
     const shouldUpdate =
-      newStatus === 'ACTIVE' ||
-      newStatus === 'CANCELLED' ||
-      newStatus === 'INCOMPLETE_EXPIRED' ||
+      newStatus === SubscriptionStatus_ENUM.ACTIVE ||
+      newStatus === SubscriptionStatus_ENUM.CANCELLED ||
+      newStatus === SubscriptionStatus_ENUM.INCOMPLETE_EXPIRED ||
       (!isPlanChange && newStatus !== existingSubscription.status);
 
-    if (!shouldUpdate && isPlanChange && newStatus === 'PAST_DUE') {
+    if (!shouldUpdate && isPlanChange && newStatus === SubscriptionStatus_ENUM.PAST_DUE) {
       logger.info(
         `Skipping subscription update - plan change attempt with PAST_DUE status for user ${user.email}`,
       );
@@ -149,7 +145,7 @@ export class PaymentSubscriptionService {
     });
 
     const statusMessage =
-      isPlanChange && newStatus === 'ACTIVE'
+      isPlanChange && newStatus === SubscriptionStatus_ENUM.ACTIVE
         ? `Plan changed from ${existingSubscription.plan?.name} to ${plan.name}`
         : `Status updated to ${newStatus}`;
 
@@ -172,7 +168,7 @@ export class PaymentSubscriptionService {
         stripeSubscriptionId: subscription.id,
       },
       data: {
-        status: 'CANCELLED',
+        status: SubscriptionStatus_ENUM.CANCELLED,
         currentPeriodEnd: subscription.ended_at
           ? new Date(subscription.ended_at * 1000)
           : new Date(),
@@ -199,7 +195,6 @@ export class PaymentSubscriptionService {
       `Checkout session completed for user ${user.email}, subscription: ${session.subscription}`,
     );
 
-    // If this was a plan change, the subscription.created/updated webhook will handle the database updates
-    // This event is mainly for logging and any session-specific logic
+    // Can send email notification here if needed
   }
 }

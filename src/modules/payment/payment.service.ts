@@ -10,7 +10,7 @@ import { PaymentIntentService } from '@/modules/payment/payment-intent/payment-i
 import { PaymentSubscriptionService } from '@/modules/payment/payment-subscription/payment-subscription.service';
 import { StripeService } from '@/modules/payment/stripe/stripe.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
-import { PaymentMethod_ENUM } from '@/types/payment.enums';
+import { PaymentMethod_ENUM, SubscriptionStatus_ENUM } from '@/types/payment.enums';
 
 @Injectable()
 export class PaymentService {
@@ -123,7 +123,7 @@ export class PaymentService {
       where: { id: userId },
       include: {
         subscriptions: {
-          where: { status: 'ACTIVE' },
+          where: { status: SubscriptionStatus_ENUM.ACTIVE },
           include: { plan: true },
         },
       },
