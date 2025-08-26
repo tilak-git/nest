@@ -1,11 +1,10 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 
 import { CurrentUser } from '@/lib/decorators/currentUser.decoraror';
 import { Public } from '@/lib/decorators/public.decorator';
-import { AuthJwtGuard } from '@/lib/guards/auth-jwt.guard';
-import { AuthService, AuthResponse } from '@/modules/auth/auth.service';
-import { LoginDto } from '@/modules/auth/dto/login.dto';
-import { SignupDto } from '@/modules/auth/dto/signup.dto';
+import { AuthService } from '@/modules/auth/auth.service';
+import { LoginDto, SignupDto } from '@/modules/auth/dto/auth.dto';
+import { CurrentUserInterface } from '@/types/user.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -13,24 +12,23 @@ export class AuthController {
 
   @Public()
   @Post('signup')
-  async signup(@Body() signupDto: SignupDto): Promise<AuthResponse> {
+  async signup(@Body() signupDto: SignupDto) {
     return this.authService.signup(signupDto);
   }
 
   @Public()
   @Post('login')
-  async login(@Body() loginDto: LoginDto): Promise<AuthResponse> {
+  async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
 
   @Get('me')
-  async getProfile(@CurrentUser() user: any) {
-    return user;
+  async getProfile(@CurrentUser() user: CurrentUserInterface) {
+    return this.authService.getProfile(user.id);
   }
 
-  @UseGuards(AuthJwtGuard)
   @Get('protected')
-  async getProtectedResource(@CurrentUser() user: any) {
+  async getProtectedResource(@CurrentUser() user: CurrentUserInterface) {
     return {
       message: 'This is a protected route',
       user,
