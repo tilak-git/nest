@@ -62,7 +62,7 @@ export class PaymentSubscriptionService {
       where: { userId: user.id },
       update: {
         stripeSubscriptionId: subscription.id,
-        status: subscription.status.toUpperCase() as SubscriptionStatus,
+        status: subscription.status as SubscriptionStatus,
         currentPeriodStart: new Date(subscription.start_date * 1000),
         currentPeriodEnd: subscription.ended_at ? new Date(subscription.ended_at * 1000) : null,
         planId: plan.id,
@@ -71,7 +71,7 @@ export class PaymentSubscriptionService {
       create: {
         userId: user.id,
         stripeSubscriptionId: subscription.id,
-        status: subscription.status.toUpperCase() as SubscriptionStatus,
+        status: subscription.status as SubscriptionStatus,
         currentPeriodStart: new Date(subscription.start_date * 1000),
         currentPeriodEnd: subscription.ended_at ? new Date(subscription.ended_at * 1000) : null,
         planId: plan.id,
