@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -8,14 +8,11 @@ import { AuthJwtGuard } from '@/lib/guards/auth-jwt.guard';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';
 import { JwtStrategy } from '@/modules/auth/strategies/jwt.strategy';
-import { PrismaModule } from '@/modules/prisma/prisma.module';
 
 @Module({
   imports: [
-    ConfigModule,
     PassportModule,
     JwtModule.registerAsync({
-      imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET');
         if (!secret) {
@@ -24,13 +21,12 @@ import { PrismaModule } from '@/modules/prisma/prisma.module';
         return {
           secret,
           signOptions: {
-            expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '24h',
+            expiresIn: configService.get<string>('JWT_EXPIRES_IN'),
           },
         };
       },
       inject: [ConfigService],
     }),
-    PrismaModule,
   ],
   controllers: [AuthController],
   providers: [

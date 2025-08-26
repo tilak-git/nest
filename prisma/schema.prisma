@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,12 +8,81 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid()) // or @default(uuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password         String?
+  name             String?
+  stripeCustomerId String?   @unique
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
 
+  orders        Order[]
+  subscriptions Subscription[]
+
+  @@index([id])
+  @@index([createdAt])
   @@map("users")
+}
+
+model SubscriptionPlan {
+  id              String         @id @default(cuid())
+  name            String
+  description     String?
+  price           Int // Price in paisa (smallest currency unit)
+  stripeProductId String?        @unique
+  stripePriceId   String?        @unique
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  Subscription    Subscription[]
+
+  @@map("Product")
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  userId                String
+  stripePaymentIntentId String?     @unique
+  status                OrderStatus @default(PENDING)
+  amount                Int // Amount in paisa
+  currency              String      @default("inr")
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  deletedAt             DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  stripeSubscriptionId String             @unique
+  planId               String?
+  status               SubscriptionStatus
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  deletedAt            DateTime?          @db.Timestamptz(3)
+
+  user User              @relation(fields: [userId], references: [id])
+  plan SubscriptionPlan? @relation(fields: [planId], references: [id])
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  active             @map("ACTIVE")
+  cancelled          @map("CANCELLED")
+  incomplete         @map("INCOMPLETE")
+  incomplete_expired @map("INCOMPLETE_EXPIRED")
+  past_due           @map("PAST_DUE")
+  trailing           @map("TRAILING")
+  unpaid             @map("UNPAID")
 }
