@@ -1,4 +1,4 @@
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -14,7 +14,9 @@ async function bootstrap() {
     new FastifyAdapter({ logger: AppLogger }),
   );
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: [{ path: '*', method: RequestMethod.GET }],
+  });
 
   // Register raw body plugin for webhook verification
   await app.register(require('fastify-raw-body'), {
