@@ -20,6 +20,7 @@ import { UserModule } from '@/modules/user/user.module';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'public', 'build'),
+      exclude: ['/api*'],
     }),
     UserModule,
     AuthModule,
