@@ -8,81 +8,22 @@ datasource db {
 }
 
 model User {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  password         String?
-  name             String?
-  stripeCustomerId String?   @unique
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  deletedAt        DateTime?
-
-  orders        Order[]
-  subscriptions Subscription[]
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String?
+  name      String?
+  role      UserRole  @default(SUPER_ADMIN)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([id])
   @@index([createdAt])
   @@map("users")
 }
 
-model SubscriptionPlan {
-  id              String         @id @default(cuid())
-  name            String
-  description     String?
-  price           Int // Price in paisa (smallest currency unit)
-  stripeProductId String?        @unique
-  stripePriceId   String?        @unique
-  active          Boolean        @default(true)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  Subscription    Subscription[]
-
-  @@map("Product")
-}
-
-model Order {
-  id                    String      @id @default(cuid())
-  userId                String
-  stripePaymentIntentId String?     @unique
-  status                OrderStatus @default(PENDING)
-  amount                Int // Amount in paisa
-  currency              String      @default("inr")
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
-  deletedAt             DateTime?
-
-  user User @relation(fields: [userId], references: [id])
-}
-
-model Subscription {
-  id                   String             @id @default(cuid())
-  userId               String             @unique
-  stripeSubscriptionId String             @unique
-  planId               String?
-  status               SubscriptionStatus
-  currentPeriodStart   DateTime
-  currentPeriodEnd     DateTime?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  deletedAt            DateTime?          @db.Timestamptz(3)
-
-  user User              @relation(fields: [userId], references: [id])
-  plan SubscriptionPlan? @relation(fields: [planId], references: [id])
-}
-
-enum OrderStatus {
-  PENDING
-  PAID
-  FAILED
-  CANCELLED
-}
-
-enum SubscriptionStatus {
-  active
-  cancelled
-  incomplete
-  incomplete_expired
-  past_due
-  trailing
-  unpaid
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
 }

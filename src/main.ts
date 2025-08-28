@@ -3,31 +3,22 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
-import { AppModule } from '@/app.module';
+import { ApiModule } from '@/api.module';
 import { GlobalExceptionFilter } from '@/lib/interceptor/global-exception-filter';
 import { TransformResponseInterceptor } from '@/lib/interceptor/response-interceptor';
 import { AppLogger } from '@/lib/logger/logger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule,
+    ApiModule,
     new FastifyAdapter({ logger: AppLogger }),
   );
 
   app.setGlobalPrefix('api');
 
-  // Register raw body plugin for webhook verification
-  await app.register(require('fastify-raw-body'), {
-    field: 'rawBody',
-    global: false,
-    encoding: 'utf8',
-    runFirst: true,
-    routes: ['/api/payments/webhook'],
-  });
-
   // Enable CORS
   await app.register(require('@fastify/cors'), {
-    origin: true, // Allow all origins in development
+    origin: process.env.NODE_ENV === 'development' ? true : process.env.FRONTEND_ADMIN_URL,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
