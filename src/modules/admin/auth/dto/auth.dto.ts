@@ -1,28 +1,32 @@
+import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
-import { Match } from '@/lib/decorators/match.decorator';
-
 export class SignupDto {
+  @IsNotEmpty()
   @IsEmail()
+  @Transform(({ value }) => value.toLowerCase().trim())
   email: string;
 
   @IsNotEmpty()
-  @MinLength(6)
-  password: string;
+  @IsString()
+  name: string;
 
   @IsNotEmpty()
+  @IsString()
   @MinLength(6)
-  @Match('password', { message: 'Passwords do not match' })
-  confirmPassword: string;
+  @Transform(({ value }) => value.trim())
+  password: string;
 }
 
 export class LoginDto {
-  @IsEmail()
   @IsNotEmpty()
+  @IsEmail()
+  @Transform(({ value }) => value.toLowerCase().trim())
   email: string;
 
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   @MinLength(6)
+  @Transform(({ value }) => value.trim())
   password: string;
 }

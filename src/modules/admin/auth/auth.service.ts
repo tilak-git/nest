@@ -1,21 +1,11 @@
-import {
-  Injectable,
-  ConflictException,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
 
-import { logger } from '@/lib/logger/logger';
+import { comparePassword, hashPassword } from '@/lib/password/password.util';
 import { LoginDto, SignupDto } from '@/modules/admin/auth/dto/auth.dto';
+import { JwtPayload } from '@/modules/admin/auth/strategies/jwt.strategy';
 import { PrismaService } from '@/modules/common/prisma/prisma.service';
-
-export interface JwtPayload {
-  id: string;
-  email: string;
-}
+import { CurrentUserInterface } from '@/types/user.interface';
 
 @Injectable()
 export class AuthService {
@@ -25,7 +15,7 @@ export class AuthService {
   ) {}
 
   async signup(signupDto: SignupDto) {
-    const { email, password } = signupDto;
+    const { email, password, name } = signupDto;
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
@@ -35,31 +25,24 @@ export class AuthService {
       throw new ConflictException(`Email ${email} is already in use`);
     }
 
-    try {
-      const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hashPassword(password, 10);
 
-      const user = await this.prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-        },
-      });
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+      },
+    });
 
-      const { password: _, ...userWithoutPassword } = user;
-      const access_token = await this.generateToken(user.id, user.email);
+    const { password: _, ...userWithoutPassword } = user;
+    const access_token = await this.generateToken(user.id, user.email);
 
-      return {
-        user: userWithoutPassword,
-        access_token,
-      };
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException(`Email ${email} is already in use`);
-      }
-
-      logger.error({ err: error }, `Signup failed for email=${email}`);
-      throw new InternalServerErrorException('Unexpected error during signup');
-    }
+    return {
+      user: userWithoutPassword,
+      access_token,
+      message: 'Signup successful',
+    };
   }
 
   async login(loginDto: LoginDto) {
@@ -74,7 +57,7 @@ export class AuthService {
     }
 
     if (user.password) {
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      const isPasswordValid = await comparePassword(password, user.password);
 
       if (!isPasswordValid) {
         throw new NotFoundException('Invalid email or password');
@@ -91,19 +74,14 @@ export class AuthService {
     };
   }
 
-  async getProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    return user;
+  async getProfile(user: CurrentUserInterface) {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   }
 
   async validateUser(userId: string) {
@@ -112,6 +90,9 @@ export class AuthService {
       select: {
         id: true,
         email: true,
+        password: true,
+        name: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
       },

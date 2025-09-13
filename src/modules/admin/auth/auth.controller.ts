@@ -24,6 +24,6 @@ export class AuthController {
 
   @Get('me')
   async getProfile(@CurrentUser() user: CurrentUserInterface) {
-    return this.authService.getProfile(user.id);
+    return this.authService.getProfile(user);
   }
 }

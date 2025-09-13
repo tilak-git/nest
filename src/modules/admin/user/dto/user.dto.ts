@@ -1,6 +1,5 @@
+import { Transform } from 'class-transformer';
 import { IsNotEmpty, MinLength } from 'class-validator';
-
-import { Match } from '@/lib/decorators/match.decorator';
 
 export class UpdateUserDto {
   @IsNotEmpty()
@@ -11,14 +10,11 @@ export class UpdateUserDto {
 export class UpdatePasswordUserDto {
   @IsNotEmpty()
   @MinLength(6)
+  @Transform(({ value }) => value.trim())
   password: string;
 
   @IsNotEmpty()
   @MinLength(6)
+  @Transform(({ value }) => value.trim())
   newPassword: string;
-
-  @IsNotEmpty()
-  @MinLength(6)
-  @Match('newPassword', { message: 'New Password and Confirm do not match' })
-  confirmPassword: string;
 }

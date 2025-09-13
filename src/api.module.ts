@@ -8,6 +8,7 @@ import { ApiController } from '@/api.controller';
 import { ApiService } from '@/api.service';
 import { validateEnv } from '@/config/env.config';
 import { AdminModule } from '@/modules/admin/admin.module';
+import { AppModule } from '@/modules/app/app.module';
 import { PrismaModule } from '@/modules/common/prisma/prisma.module';
 
 @Module({
@@ -24,8 +25,13 @@ import { PrismaModule } from '@/modules/common/prisma/prisma.module';
         path: 'admin',
         module: AdminModule,
       },
+      {
+        path: 'app',
+        module: AppModule,
+      },
     ]),
     AdminModule,
+    AppModule,
   ],
   controllers: [ApiController],
   providers: [ApiService],

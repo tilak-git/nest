@@ -1,4 +1,3 @@
-// @/modules/admin/admin.module.ts
 import { Module } from '@nestjs/common';
 import { RouterModule } from '@nestjs/core';
 

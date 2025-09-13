@@ -6,7 +6,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ApiModule } from '@/api.module';
 import { GlobalExceptionFilter } from '@/lib/interceptor/global-exception-filter';
 import { TransformResponseInterceptor } from '@/lib/interceptor/response-interceptor';
-import { AppLogger } from '@/lib/logger/logger';
+import { AppLogger, logger } from '@/lib/logger/logger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -18,7 +18,7 @@ async function bootstrap() {
 
   // Enable CORS
   await app.register(require('@fastify/cors'), {
-    origin: process.env.NODE_ENV === 'development' ? true : process.env.FRONTEND_ADMIN_URL,
+    origin: process.env.NODE_ENV === 'prod' ? process.env.FRONTEND_ADMIN_URL : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -77,7 +77,7 @@ async function bootstrap() {
   });
 
   let docs: any = document;
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV !== 'prod') {
     for (const path in docs.paths) {
       for (const method in docs.paths[path]) {
         const operation = docs.paths[path][method];
@@ -102,8 +102,8 @@ async function bootstrap() {
   const port = process.env.SERVER_PORT || 5008;
   await app.listen(port, '0.0.0.0');
 
-  console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`Swagger documentation available at: http://localhost:${port}/api-docs`);
+  logger.info(`Application is running on: http://localhost:${port}`);
+  logger.info(`Swagger documentation available at: http://localhost:${port}/api-docs`);
 }
 
 bootstrap();

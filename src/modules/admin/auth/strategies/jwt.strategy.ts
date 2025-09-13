@@ -3,8 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy, StrategyOptions } from 'passport-jwt';
 
-import { AuthService, JwtPayload } from '@/modules/admin/auth/auth.service';
+import { AuthService } from '@/modules/admin/auth/auth.service';
 
+export interface JwtPayload {
+  id: string;
+  email: string;
+}
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -12,10 +16,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     configService: ConfigService,
   ) {
     const jwtSecret = configService.getOrThrow<string>('JWT_SECRET');
-
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET is not defined in environment variables');
-    }
 
     const options: StrategyOptions = {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
